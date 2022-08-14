@@ -45,6 +45,15 @@ short Board::clear_line() {
 }
 
 
+
+short Board::get_clear_lines() {
+	short clear_lines = 0;
+
+	for (int y = 0; y < BOARD_HEIGHT; y++)
+		if (board[y] == BOARD_FILL) clear_lines++;
+	return clear_lines;
+}
+
 void Board::place_piece(Piece piece) {
 	for (int y = 0; y < 4; y++) {
 		if (piece.x <= 6) board[piece.y - y] |= Defines::piece[piece.type][piece.r][y] << (6 - piece.x);
@@ -59,7 +68,8 @@ bool Board::can_place(Piece piece, short dx, short dy) {
 	for (int y = 0; y < 4; y++) {
 		if (px < Defines::piece_place_range_X[piece.type][piece.r][0] || px > Defines::piece_place_range_X[piece.type][piece.r][1]) return false;
 		else if (py - y < 0 && Defines::piece[piece.type][piece.r][y] != 0) return false;
-		else if ((board[py - y] & Defines::piece[piece.type][piece.r][y] << (6 - px)) != BOARD_EMPTY) return false;
+		else if ((px <= 6) && (board[py - y] & Defines::piece[piece.type][piece.r][y] << (6 - px) & BOARD_FILL) != BOARD_EMPTY) return false;
+		else if((board[py - y] & Defines::piece[piece.type][piece.r][y] >> (px - 6) & BOARD_FILL) != BOARD_EMPTY) return false;
 	}
 	return true;
 }
@@ -102,4 +112,14 @@ SRS_data Board::can_rotate(Piece piece, Rotation rotation) {
 		}
     }
 	return result;
+}
+
+int Board::try_place(Piece *piece, short dx, short dy, Rotation rotation, bool is_fall) {
+	Board board_tmp = (*this);
+
+	if(!piece->move(&board_tmp, dx, dy)) return -1;
+	if (rotation != Rotate_null && !(piece->rotate(&board_tmp, rotation))) return -1;
+	if(is_fall) piece->fall(&board_tmp);
+	board_tmp.place_piece(*piece);
+	return board_tmp.get_clear_lines();
 }

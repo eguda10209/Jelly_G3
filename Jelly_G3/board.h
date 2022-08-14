@@ -21,7 +21,11 @@ public:
 	void set_board(unsigned short board[BOARD_HEIGHT]);
 	void reset_board();
 	short clear_line();
+	short get_clear_lines();
 	void place_piece(class Piece piece);
 	bool can_place(class Piece piece, short dx, short dy);
 	struct SRS_data can_rotate(class Piece piece, enum Rotation rotation);
+
+	/*pieceからdx, dy移動、回転後、のライン消去数を返す ret: -1:設定不可能 0 ~ 4:ライン消去数*/
+	int try_place(class Piece *piece, short dx, short dy, enum Rotation rotation, bool is_fall);
 };

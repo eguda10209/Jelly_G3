@@ -17,3 +17,4 @@
 #include "piece.h"
 #include "debug.h"
 #include "defines.h"
+#include "evaluation.h"

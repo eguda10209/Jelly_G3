@@ -44,3 +44,12 @@ short Piece::place(Board* board) {
 	board->place_piece(*this);
 	return board->clear_line();
 }
+
+void Piece::fall(class Board* board) {
+	for (int dy = 1; dy < BOARD_HEIGHT; dy++) {
+		if (!board->can_place(*this, 0, -dy)) {
+			this->y += -dy + 1;
+			return;
+		}
+	}
+}
