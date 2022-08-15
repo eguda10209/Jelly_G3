@@ -115,11 +115,59 @@ SRS_data Board::can_rotate(Piece piece, Rotation rotation) {
 }
 
 int Board::try_place(Piece *piece, short dx, short dy, Rotation rotation, bool is_fall) {
-	Board board_tmp = (*this);
+	if(!piece->move(this, dx, dy)) return -1;
+	if (rotation != Rotate_null && !(piece->rotate(this, rotation))) return -1;
+	if(is_fall) piece->fall(this);
+	this->place_piece(*piece);
+	return this->clear_line();
+}
 
-	if(!piece->move(&board_tmp, dx, dy)) return -1;
-	if (rotation != Rotate_null && !(piece->rotate(&board_tmp, rotation))) return -1;
-	if(is_fall) piece->fall(&board_tmp);
-	board_tmp.place_piece(*piece);
-	return board_tmp.get_clear_lines();
+
+Board* Board::copy_board() {
+	//Board new_board;
+	//new_board = (*this);
+	//return &new_board;
+	Board *new_board = (Board*) malloc(sizeof(Board));
+	*new_board = *this;
+	return new_board;
+}
+
+/*combo btb pieces max_heightの更新*/
+void Board::updata_board_status(short clear_lines, Rotation_type rot_type, bool use_hold) {
+	/*max_heightの更新*/
+	/*
+	[1] 0000000000
+	[0] 0000111100	-> max_height:1
+	*/
+	for (int y = 0; y < BOARD_HEIGHT; y++) {
+		if (this->board[y] == BOARD_EMPTY) {
+			this->max_height = y;
+			break;
+		}
+	}
+
+	/*piecesの更新*/
+	if (use_hold && this->hold_piece == -1) {
+		this->hold_piece = this->next_piece[0];
+		for (int i = 0; i < NEXT_MAX - 1; i++) this->next_piece[i] = this->next_piece[i + 1];
+		this->next_piece[NEXT_MAX - 1] = -1;
+	}
+	else if (use_hold) this->hold_piece = this->next_piece[0];
+	for(int i = 0; i < NEXT_MAX - 1; i++) this->next_piece[i] = this->next_piece[i + 1];
+	this->next_piece[NEXT_MAX - 1] = -1;
+
+	//combo, btb更新
+	if (clear_lines == 0) {
+		this->combo = -1;
+		this->btb = false;
+	}
+	else if (clear_lines == 4) {
+		this->combo++;
+		this->btb = true;
+	}
+	else {
+		this->combo++;
+		if(rot_type == TSpinmini || rot_type == TSpin) this->btb = true;
+		else this->btb = false;
+	}
 }

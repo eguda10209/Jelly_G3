@@ -14,17 +14,18 @@
 #define MOVES_SIZE_MAX 5
 #define MOVES_BUFF_MAX 300
 
+#define UPPER_MOVE_Y_TH 16
+
 //MCTSノード
 typedef struct MCT_node {
-
+	int eval_value = 0;
+	int reward_value = 0;
+	class Piece_move_data *pmd;
+	MCT_node* parent_node;
+	std::vector<MCT_node*> children_node;
 };
-//評価値、報酬、盤面、ミノデータ、Piece_move_data 親ノードポインタ（4 + 4 + 80 + 1 + ? + 8 bytes?）
+//評価値、報酬、盤面、ミノデータ、Piece_move_data 親,子ノードポインタ（4 + 4 + 80 + 1 + ? + 8 bytes?）
 
-//MCT
-typedef struct MCT {
-
-};
-//子ノードポインタ配列
 
 typedef struct Solution{
 	std::vector<class Piece_move_data> operation_data;
@@ -44,8 +45,12 @@ public:
 	/*あるミノの操作パターンを与え、盤面に設置することによる報酬を計算*/
 	int get_reward_value(class Board *board, class Piece_move_data pmd);
 
-	/*操作可能なパターンを作成（start_pieceの場所から移動可能なもの）*/
-	std::vector<class Piece_move_data> find_peice_moves(class Board *board, class Piece start_piece, bool is_upper_move);
+	/*操作可能なパターンを作成（start_pieceの場所から移動可能なもの）
+	引数: 盤面(すべての情報を入れたもの(next_piece, btbなど))、スポーン時のx,y,r、ホールド使用の有無を指定
+	戻り値: 操作可能なパターン(Piece_move_data)のvector、操作後の盤面の情報(盤面、btb, combo、ライン消去数など)も含む
+			必要なミノ情報がない場合空のvectorを返す
+	*/
+	std::vector<class Piece_move_data> find_peice_moves(class Board *board, short spawn_x, short spawn_y, short spawn_r, bool use_hold);
 
 	bool is_meaningful_move(class Board* board, class Piece piece);
 

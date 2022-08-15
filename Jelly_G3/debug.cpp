@@ -4,8 +4,8 @@ using namespace std;
 void set_debug_board(Board *board) {
 	board->reset_board();
 	board->board[2] = 0b1011001111;
-	board->board[1] = 0b1011000111;
-	board->board[0] = 0b1011101111;
+	board->board[1] = 0b1111000111;
+	board->board[0] = 0b1111101111;
 
 }
 
@@ -85,24 +85,30 @@ void debug() {
 	ofs << "cline: " << board.try_place(piece2, 0, 0, Rotate_right) << endl;
 	for (int y = BOARD_HEIGHT - 1 - 20; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;*/
 
-	Piece piece3(4, PIECE_SPAWN_X, PIECE_SPAWN_Y, 0);
+	board.hold_piece = 3;
+	board.next_piece[0] = 4;
+	board.next_piece[1] = 5;
 	set_debug_board(&board);
 	for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;
-	std::vector<Piece_move_data> moves = ev.find_peice_moves(&board, piece3, false);
+	std::vector<Piece_move_data> moves = ev.find_peice_moves(&board, PIECE_SPAWN_X, PIECE_SPAWN_Y, 0, false);
 	for (int i = 0; i < moves.size(); i++) {
-		Piece piece_tmp = piece3;
-		piece_tmp.x = moves[i].last_x;
-		piece_tmp.y = moves[i].last_y;
-		piece_tmp.r = moves[i].last_r;
-		piece_tmp.place(&board);
-		ofs << moves[i].to_x << " " << moves[i].to_r << " " << moves[i].last_r << endl;
-		for (int j = 0; j < moves[i].moves.size(); j++) ofs << moves[i].moves[j] <<" ";
-		ofs << endl;
+		//ofs << moves[i].to_x << " " << moves[i].to_r << " " << moves[i].last_r << endl;
+		//for (int j = 0; j < moves[i].moves.size(); j++) ofs << moves[i].moves[j] <<" ";
+		//ofs << endl;
 		if (moves[i].rot_type == Normal) ofs << "tspin: normal" << endl;
 		else if (moves[i].rot_type == TSpinmini) ofs << "tspin: TSpinmini" << endl;
 		else if (moves[i].rot_type == TSpin) ofs << "tspin: TSpin" << endl;
-		for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;
-		set_debug_board(&board);
+		ofs << moves[i].clear_lines << endl;
+		ofs << "btb: " << moves[i].board->btb << endl;
+		ofs << "combo: " << moves[i].board->combo << endl;
+		ofs << (int)moves[i].board->hold_piece << " ";
+		for (int j = 0; j < 5; j++) ofs << (int)moves[i].board->next_piece[j] << " "; ofs << endl;
+		for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(moves[i].board->board[y]) << endl; ofs << endl;
 	}
+
+	for (int i = 0; i < moves.size(); i++) free(moves[i].board);
+
+
+	for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;
 }
 

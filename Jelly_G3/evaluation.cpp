@@ -3,28 +3,51 @@
 Solution Evaluation::find_optimal_solution(short next_num, std::vector<char> pieces) {
 	Solution opt_sol;
 
+	//展開するノードの選択
+	//展開 find_peice_moves(展開するノードの盤面、設置するミノ、上段操作モードか)
+	// 	   ー＞vector<Piece_move_data>：　移動可能なミノ情報(移動方法、)
+	//展開したノードに対して評価
+	//評価の逆伝搬
+
+
 	return opt_sol;
 }
 
 int Evaluation::get_evaluation_value(Board* board) {
 	int result = 0;
-
+		//地形評価
+	//ネクスト評価
 	return result;
 }
 
 int Evaluation::get_reward_value(Board* board, Piece_move_data pmd) {
 	int result = 0;
-
+	//火力
+	//置くのにかかる時間
 	return result;
 }
 
-std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece start_piece, bool is_upper_move) {
+// todo 同じ置き方だが別の操作方法で置いている場合もある
+std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, short spawn_x, short spawn_y, short spawn_r, bool use_hold) {
 	/*
 	ハードドロップの場合
 		Oミノは回転0のみ
 		その他は4回転分
 	*/
 	std::vector<Piece_move_data> result;
+	char piece_type = 0;
+	if (use_hold && board->hold_piece == PIECE_TYPE_NONE) {
+		piece_type = board->next_piece[1];
+	}
+	else if (use_hold) {
+		piece_type = board->hold_piece;
+	}else {
+		piece_type = board->next_piece[0];
+	}
+	if (piece_type == PIECE_TYPE_NONE) return result;
+
+	Piece start_piece(piece_type, spawn_x, spawn_y, spawn_r);
+
 	Piece piece_nomove = start_piece;
 	Piece piece = start_piece;
 
@@ -47,10 +70,11 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 		else if (r == 3) {
 			if (piece_nomove.rotate(board, Rotate_left) == -1) continue;
 		}
-		 
+
 		//初期位置に設置できるか。
 		piece = piece_nomove;
-		pmd.clear_lines = board->try_place(&piece, 0, 0, Rotate_null, true);
+		pmd.board = board->copy_board();
+		pmd.clear_lines = pmd.board->try_place(&piece, 0, 0, Rotate_null, true);
 		if (pmd.clear_lines == -1) {
 			if (r == 0) {//スポーン時、y=20に設置できない場合はy=21に設置される。
 				if (start_piece.y == PIECE_SPAWN_Y) {
@@ -58,7 +82,8 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 					piece_nomove.y++;
 					piece = piece_nomove;
 				}else break;
-				pmd.clear_lines = board->try_place(&piece, 0, 0, Rotate_null, true);
+				pmd.board = board->copy_board();
+				pmd.clear_lines = pmd.board->try_place(&piece, 0, 0, Rotate_null, true);
 				if (pmd.clear_lines == -1) {
 					break;
 				}
@@ -66,7 +91,10 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 					pmd.last_x = piece.x;
 					pmd.last_y = piece.y;
 					pmd.last_r = piece.r;
-					if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) result.push_back(pmd);
+					pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+					if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) {
+						result.push_back(pmd);
+					}else free(pmd.board);
 				}
 			}
 			else continue;
@@ -75,20 +103,29 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 			pmd.last_x = piece.x;
 			pmd.last_y = piece.y;
 			pmd.last_r = piece.r;
-			if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) result.push_back(pmd);
+			pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+			if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) {
+				result.push_back(pmd);
+			}
+			else free(pmd.board);
 		}
 
 		//左に移動
 		for (int dx = -1; dx > -10; dx--) {
 			piece = piece_nomove;
 			pmd.to_x = piece.x + dx;
-			pmd.clear_lines = board->try_place(&piece, dx, 0, Rotate_null, true);
+			pmd.board = board->copy_board();
+			pmd.clear_lines = pmd.board->try_place(&piece, dx, 0, Rotate_null, true);
 			if (pmd.clear_lines == -1) break;
 			else {
 				pmd.last_x = piece.x;
 				pmd.last_y = piece.y;
 				pmd.last_r = piece.r;
-				if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) result.push_back(pmd);
+				pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+				if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) {
+					result.push_back(pmd);
+				}
+				else free(pmd.board);
 			}
 		}
 
@@ -96,13 +133,18 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 		for (int dx = 1; dx < 10; dx++) {
 			piece = piece_nomove;
 			pmd.to_x = piece.x + dx;
-			pmd.clear_lines = board->try_place(&piece, dx, 0, Rotate_null, true);
+			pmd.board = board->copy_board();
+			pmd.clear_lines = pmd.board->try_place(&piece, dx, 0, Rotate_null, true);
 			if (pmd.clear_lines == -1) break;
 			else {
 				pmd.last_x = piece.x;
 				pmd.last_y = piece.y;
 				pmd.last_r = piece.r;
-				if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) result.push_back(pmd);
+				pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+				if (pmd.last_y < Defines::Gameover_y[piece.type][piece.r]) {
+					result.push_back(pmd);
+				}
+				else free(pmd.board);
 			}
 		}
 	}
@@ -137,12 +179,17 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 				piece.x = pmd.last_x;
 				piece.y = pmd.last_y;
 				piece.r = pmd.last_r;
-				pmd.clear_lines = board->try_place(&piece, -1, 0, Rotate_null, false);
+				pmd.board = board->copy_board();
+				pmd.clear_lines = pmd.board->try_place(&piece, -1, 0, Rotate_null, false);
 				if (pmd.clear_lines != -1) {
 					pmd.last_x = piece.x;
 					pmd.last_y = piece.y;
 					pmd.last_r = piece.r;
-					if ((is_upper_move || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) result.push_back(pmd);
+					pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+					if ((pmd.board->max_height>= UPPER_MOVE_Y_TH || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) {
+						result.push_back(pmd);
+					}
+					else free(pmd.board);
 				}
 			}
 
@@ -153,12 +200,17 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 				piece.x = pmd.last_x;
 				piece.y = pmd.last_y;
 				piece.r = pmd.last_r;
-				pmd.clear_lines = board->try_place(&piece, 1, 0, Rotate_null, false);
+				pmd.board = board->copy_board();
+				pmd.clear_lines = pmd.board->try_place(&piece, 1, 0, Rotate_null, false);
 				if (pmd.clear_lines != -1) {
 					pmd.last_x = piece.x;
 					pmd.last_y = piece.y;
 					pmd.last_r = piece.r;
-					if ((is_upper_move || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) result.push_back(pmd);
+					pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+					if ((pmd.board->max_height >= UPPER_MOVE_Y_TH || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) {
+						result.push_back(pmd);
+					}
+					else free(pmd.board);
 				}
 			}
 
@@ -168,12 +220,17 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 			piece.x = pmd.last_x;
 			piece.y = pmd.last_y;
 			piece.r = pmd.last_r;
-			pmd.clear_lines = board->try_place(&piece, 0, -1, Rotate_null, false);
+			pmd.board = board->copy_board();
+			pmd.clear_lines = pmd.board->try_place(&piece, 0, -1, Rotate_null, false);
 			if (pmd.clear_lines != -1) {
 				pmd.last_x = piece.x;
 				pmd.last_y = piece.y;
 				pmd.last_r = piece.r;
-				if ((is_upper_move || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) result.push_back(pmd);
+				pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+				if ((pmd.board->max_height >= UPPER_MOVE_Y_TH || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) {
+					result.push_back(pmd);
+				}
+				else free(pmd.board);
 			}
 
 			//右回転
@@ -186,14 +243,17 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 				if (piece.type == PIECE_TYPE_T) {
 					pmd.rot_type = get_rotation_type(board, piece, Rotate_right);
 				}
-				pmd.clear_lines = board->try_place(&piece, 0, 0, Rotate_right, false);
+				pmd.board = board->copy_board();
+				pmd.clear_lines = pmd.board->try_place(&piece, 0, 0, Rotate_right, false);
 				if (pmd.clear_lines != -1) {
 					pmd.last_x = piece.x;
 					pmd.last_y = piece.y;
 					pmd.last_r = piece.r;
-					if ((is_upper_move || pmd.rot_type != Normal || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) {
+					pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+					if ((pmd.board->max_height >= UPPER_MOVE_Y_TH || pmd.rot_type != Normal || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) {
 						result.push_back(pmd);
 					}
+					else free(pmd.board);
 				}
 			}
 
@@ -207,14 +267,17 @@ std::vector<Piece_move_data> Evaluation::find_peice_moves(Board *board, Piece st
 				if (piece.type == PIECE_TYPE_T) {
 					pmd.rot_type = get_rotation_type(board, piece, Rotate_left);
 				}
-				pmd.clear_lines = board->try_place(&piece, 0, 0, Rotate_left, false);
+				pmd.board = board->copy_board();
+				pmd.clear_lines = pmd.board->try_place(&piece, 0, 0, Rotate_left, false);
 				if (pmd.clear_lines != -1) {
 					pmd.last_x = piece.x;
 					pmd.last_y = piece.y;
 					pmd.last_r = piece.r;
-					if ((is_upper_move || pmd.rot_type != Normal || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) {
+					pmd.board->updata_board_status(pmd.clear_lines, pmd.rot_type, use_hold);
+					if ((pmd.board->max_height >= UPPER_MOVE_Y_TH || pmd.rot_type != Normal || is_meaningful_move(board, piece)) && (pmd.last_y < Defines::Gameover_y[piece.type][piece.r])) {
 						result.push_back(pmd);
 					}
+					else free(pmd.board);
 				}
 			}
 

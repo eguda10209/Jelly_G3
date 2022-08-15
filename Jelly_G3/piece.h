@@ -1,6 +1,7 @@
 #pragma once
 #include "include.h"
 
+#define PIECE_TYPE_NONE -1
 #define PIECE_TYPE_S 0
 #define PIECE_TYPE_Z 1
 #define PIECE_TYPE_J 2
@@ -71,19 +72,21 @@ public:
 	//to_x, to_r:ハードドロップ、ソフトドロップ前までに移動する場所 
 	short to_x;
 	short to_r;
-	//last_x, last_y:最終的なy座標
+	//last_x, last_y, last_r:最終的に設置するx,y,r
 	short last_x;
 	short last_y;
 	short last_r;
+	//移動方法
 	std::vector<char> moves;
+	//消去するライン数
 	short clear_lines;
+	//回転の種類(主にTspinであるかの情報)
 	Rotation_type rot_type;
+	//設置後の盤面
+	Board *board;
 
 	Piece_move_data() {
 		clear_lines = 0;
 		rot_type = Normal;
 	}
-	//to_x to_r
-	//操作(HN)[H:Hold, N:通常操作 D:ハードドロップ, S:ソフトドロップ ...]
-	//ライン消去数　Tスピンデータ
 };
