@@ -11,6 +11,7 @@
 #define MOVE_ROTATE_LEFT 'M'
 #define MOVE_ROTATE_RIGHT 'K'
 
+//piece.h MOVES_BUFF_SIZE_MAXも更新する
 #define MOVES_SIZE_MAX 5
 #define MOVES_BUFF_MAX 100
 
@@ -54,7 +55,7 @@ public:
 	戻り値: 操作可能なパターン(Piece_move_data)のvector、操作後の盤面の情報(盤面、btb, combo、ライン消去数など)も含む
 			必要なミノ情報がない場合空のvectorを返す
 	*/
-	std::vector<class Piece_move_data> find_peice_moves(class Board board, short spawn_x, short spawn_y, short spawn_r, bool use_hold);
+	std::vector<class Piece_move_data*> find_peice_moves(class Board board, short spawn_x, short spawn_y, short spawn_r, bool use_hold);
 
 	bool is_meaningful_move(class Board* board, class Piece piece);
 

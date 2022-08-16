@@ -10,4 +10,5 @@ public:
 	static short SZJLT_LeftRotation_dxy[4][5][2];
 
 	static short Gameover_y[7][4];
+
 };

@@ -14,6 +14,8 @@
 #define PIECE_SPAWN_X 3
 #define PIECE_SPAWN_Y 20
 
+#define MOVES_BUFF_SIZE_MAX 8
+
 typedef enum Rotation {
 	Rotate_null,
 	Rotate_right,
@@ -77,7 +79,9 @@ public:
 	short last_y;
 	short last_r;
 	//ˆÚ“®•û–@
-	std::vector<char> moves;
+	//std::vector<char> moves;
+	char moves[MOVES_BUFF_SIZE_MAX];
+	int moves_size;
 	//Á‹‚·‚éƒ‰ƒCƒ“”
 	short clear_lines;
 	//‰ñ“]‚Ìí—Ş(å‚ÉTspin‚Å‚ ‚é‚©‚Ìî•ñ)
@@ -88,5 +92,6 @@ public:
 	Piece_move_data() {
 		clear_lines = 0;
 		rot_type = Normal;
+		moves_size = 0;
 	}
 };
