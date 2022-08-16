@@ -21,7 +21,7 @@ public:
 	//std::vector<char> next_piece{ 12 };　//->copy_board()でメモリアクセスエラーが起きる
 	char next_piece[NEXT_MAX];
 
-	Board(){
+	Board(int null){
 		for (int y = 0; y < BOARD_HEIGHT; y++) board[y] = BOARD_EMPTY;
 		for (int i = 0; i < NEXT_MAX; i++) next_piece[i] = -1;
 		max_height = 0;

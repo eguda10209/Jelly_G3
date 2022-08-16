@@ -128,7 +128,16 @@ Board* Board::copy_board() {
 	//new_board = (*this);
 	//return &new_board;
 	Board *new_board = (Board*) malloc(sizeof(Board));
-	*new_board = *this;
+	//*new_board = *this;
+	//for (int y = 0; y < BOARD_HEIGHT; y++) new_board->board[y] = board[y];
+
+	new_board->btb = this->btb;
+	new_board->combo = this->combo;
+	new_board->hold_piece = this->hold_piece;
+	new_board->max_height = this->max_height;
+	for (int i = 0; i < BOARD_HEIGHT; i++) new_board->board[i] = this->board[i];
+	for (int i = 0; i < NEXT_MAX; i++) new_board->next_piece[i] = this->next_piece[i];
+
 	return new_board;
 }
 

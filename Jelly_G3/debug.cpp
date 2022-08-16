@@ -10,7 +10,7 @@ void set_debug_board(Board *board) {
 }
 
 void debug() {
-	Board board;
+	Board board(0);
 	Evaluation ev;
 
 	std::ofstream ofs("./debug.txt");
@@ -85,7 +85,7 @@ void debug() {
 	ofs << "cline: " << board.try_place(piece2, 0, 0, Rotate_right) << endl;
 	for (int y = BOARD_HEIGHT - 1 - 20; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;*/
 
-	board.hold_piece = 3;
+	/*board.hold_piece = 3;
 	board.next_piece[0] = 4;
 	board.next_piece[1] = 5;
 	set_debug_board(&board);
@@ -109,6 +109,12 @@ void debug() {
 	for (int i = 0; i < moves.size(); i++) free(moves[i].board);
 
 
-	for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;
+	for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;*/
+
+	board.hold_piece = 3;
+	board.next_piece[0] = 4;
+	board.next_piece[1] = 5;
+
+	ev.find_optimal_solution(board, PIECE_SPAWN_X, PIECE_SPAWN_Y, 0);
 }
 

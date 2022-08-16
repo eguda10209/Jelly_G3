@@ -7,6 +7,12 @@
 #include <iostream>
 #include <bitset>
 #include <vector>
+#include <map>
+#include <time.h>
+#include <random>
+
+#include <algorithm>
+#include <functional>
 
 #include "resource.h"
 #include "framework.h"
