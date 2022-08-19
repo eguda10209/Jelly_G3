@@ -24,3 +24,5 @@
 #include "debug.h"
 #include "defines.h"
 #include "evaluation.h"
+#include "bot.h"
+#include "controller.h"

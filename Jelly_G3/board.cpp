@@ -180,3 +180,53 @@ void Board::updata_board_status(short clear_lines, Rotation_type rot_type, bool 
 		else this->btb = false;
 	}
 }
+
+
+void Board::update_board_data(short player_num) {
+	bool skip = false;
+	for (int y = 0; y < BOARD_HEIGHT; y++) {
+		short by = BOARD_EMPTY;
+		if (skip) {
+			this->board[y] = by;
+			continue;
+		}
+		for (int x = 0; x < 10; x++) {
+			if (ProcessMemory::GetBoard(x, y, player_num) == 1) {
+				by |= 0b1000000000 >> x;
+			}
+
+		}
+		this->board[y] = by;
+		if (by == BOARD_EMPTY) skip = true;
+	}
+}
+
+void Board::update_board_by_memory(short player_num, short nexts) {
+	/*”Õ–Ê*/
+	this->update_board_data(player_num);
+
+	/*piece*/
+	this->next_piece[0] = ProcessMemory::GetCurrentmino(player_num);
+	for(int i = 1; i <= nexts; i++) this->next_piece[i] = ProcessMemory::GetNextmino(i, player_num);
+	this->hold_piece = ProcessMemory::GetHoldmino(player_num);
+
+
+	/*max_height*/
+	for (int y = 0; y < BOARD_HEIGHT; y++) {
+		if (this->board[y] == BOARD_EMPTY) {
+			this->max_height = y;
+			break;
+		}
+	}
+
+	/*combo & btb*/
+	short combo_btb = ProcessMemory::GetComboAndBtb(player_num);
+	if (combo_btb >= 0xFF) {
+		combo = combo_btb - 0xFF - 1;
+		btb = true;
+	}
+	else {
+		combo = combo_btb - 1;
+		btb = false;
+	}
+}

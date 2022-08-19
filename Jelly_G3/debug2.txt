@@ -1,0 +1,21 @@
+dx: 1
+dr: 2
+tox: 4
+tor: 2
+cx: 4
+cr: 0
+
+dx: 0
+dr: 1
+tox: 4
+tor: 2
+cx: 5
+cr: 1
+
+dx: 0
+dr: 0
+tox: 4
+tor: 2
+cx: 5
+cr: 2
+

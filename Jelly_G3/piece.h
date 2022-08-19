@@ -13,6 +13,7 @@
 
 #define PIECE_SPAWN_X 3
 #define PIECE_SPAWN_Y 20
+#define PIECE_SPAWN_R 0
 
 #define MOVES_BUFF_SIZE_MAX 8
 
@@ -79,7 +80,7 @@ public:
 	short last_y;
 	short last_r;
 	//ˆÚ“®•û–@
-	//std::vector<char> moves;
+	bool use_hold;
 	char moves[MOVES_BUFF_SIZE_MAX];
 	int moves_size;
 	//Á‹‚·‚éƒ‰ƒCƒ“”

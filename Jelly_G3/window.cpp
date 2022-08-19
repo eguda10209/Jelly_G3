@@ -10,11 +10,12 @@ HWND hWndPPT = FindWindow(TEXT("TetPuyo"), TEXT("PuyoPuyoTetris")); //PPTのハ�
 bool IsAION = true, IsControllerConnected = false;
 PAINTSTRUCT ps;
 HDC hdc, hdc1;
-HWND check1, check2, check3, check4, combo1, combo_mode, comment, comment2, comment3, combo_player, button1, XBox_Up, XBox_Down, XBox_Left, XBox_Right,
+HWND check1, check2, check3, check4, combo_nexts, combo_mode, comment, comment2, comment3, combo_player, button1, XBox_Up, XBox_Down, XBox_Left, XBox_Right,
 XBox_A, XBox_B, XBox_Connect, XBox_DisConnect, XBox_LA, Reload, SpeedPercentage;
 HPEN hpen;
 int nextthink = 0;
 bool initcalled = false;
+Bot bot(0);
 
 int minocolor[9][3] = { {0,255,0},
                         {255,0,0},
@@ -31,7 +32,7 @@ bool GetIsAION() {
 }
 
 int Getnextthink() {
-    return  SendMessage(combo1, CB_GETCURSEL, 0, 0) + 1;
+    return  SendMessage(combo_nexts, CB_GETCURSEL, 0, 0) + 1;
 }
 
 int GetAIType() {
@@ -58,10 +59,6 @@ int GetAIType() {
         break;
     }*/
     return 0;
-}
-
-int GetPlayerNumber() {
-    return SendMessage(combo_player, CB_GETCURSEL, 0, 0) + 1;
 }
 
 void PrintColorBoard(int colorboard[THINKBOARD_H][THINKBOARD_W]) {
@@ -282,7 +279,7 @@ int WINAPI WinMain(
         23, 195, 150, 300,
         hWnd, (HMENU)4, hInstance, NULL
     );
-    combo1 = CreateWindow(
+    combo_nexts = CreateWindow(
         TEXT("COMBOBOX"), NULL,
         WS_CHILD | WS_VISIBLE | CBS_SORT | CBS_DROPDOWNLIST,
         23, 225, 100, 300,
@@ -380,11 +377,11 @@ int WINAPI WinMain(
         hWnd, (HMENU)21, hInstance, NULL
     );
 
-    SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 1"));
-    SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 2"));
-    SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 3"));
-    SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 4"));
-    SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 5"));
+    SendMessage(combo_nexts, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 1"));
+    SendMessage(combo_nexts, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 2"));
+    SendMessage(combo_nexts, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 3"));
+    SendMessage(combo_nexts, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 4"));
+    SendMessage(combo_nexts, CB_ADDSTRING, 0, (LPARAM)TEXT("Next: 5"));
     SendMessage(combo_player, CB_ADDSTRING, 0, (LPARAM)TEXT("Player: 1"));
     SendMessage(combo_player, CB_ADDSTRING, 0, (LPARAM)TEXT("Player: 2"));
     SendMessage(combo_mode, CB_ADDSTRING, 0, (LPARAM)TEXT("1. Normal"));
@@ -395,7 +392,7 @@ int WINAPI WinMain(
     SendMessage(check1, BM_SETCHECK, BST_CHECKED, 0);
     SendMessage(check2, BM_SETCHECK, BST_CHECKED, 0);
     SendMessage(check3, BM_SETCHECK, BST_CHECKED, 0);
-    SendMessage(combo1, CB_SETCURSEL, 4, 0);
+    SendMessage(combo_nexts, CB_SETCURSEL, 4, 0);
     SendMessage(combo_mode, CB_SETCURSEL, 0, 0);
 
     if (!IsPlayer2) {//同プロセスが起動済みならばプレイヤーを2に設定
@@ -405,13 +402,10 @@ int WINAPI WinMain(
         Comment(TEXT("=> Player: 2"), 0, 0);
         SendMessage(combo_player, CB_SETCURSEL, 1, 0);
     }
-
-    //設定表示
-    Comment(TEXT("=> /O2"), 0, 0);
-    //if (SearchMethod == 0) Comment(TEXT("=> BS"), 0, 0);
-    //if (SearchMethod == 1) Comment(TEXT("=> MCTS"), 0, 0);
     
     debug();
+    bot.player_num = SendMessage(combo_player, CB_GETCURSEL, 0, 0) + 1;
+    bot.nexts = SendMessage(combo_nexts, CB_GETCURSEL, 0, 0) + 1;
 
     XBoxController::PlugIn();//起動時にコントローラー接続
     Comment(TEXT("コントローラーを接続しました。"), NULL, 0);
@@ -449,7 +443,7 @@ int WINAPI WinMain(
 }
 
 DWORD WINAPI ThreadFunc(LPVOID vdParam) {
-    //while (true) AI::RunAI();
+    while (true) bot.run_bot();
     return true;
 }
 
@@ -545,7 +539,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wc, LPARAM lp) {
                 SendMessage(check4, BM_SETCHECK, BST_UNCHECKED, 0);
             }
             break;
-
+        case 6:
+            bot.nexts = SendMessage(combo_nexts, CB_GETCURSEL, 0, 0) + 1;
+            break;
         case 10:
             SetForegroundWindow(hWndPPT);
             if (IsControllerConnected == false) {
@@ -569,6 +565,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wc, LPARAM lp) {
             }
             break;
         case 12:
+            bot.player_num = SendMessage(combo_player, CB_GETCURSEL, 0, 0) + 1;
             break;
         case 13:
             SetForegroundWindow(hWndPPT);
@@ -690,6 +687,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wc, LPARAM lp) {
         return 0;
     case WM_TIMER:
         //AI::RunAI();
+        bot.run_bot();
         //if (IsDebugMode && DebugDoOnce) DefWindowProc(hWnd, WM_CLOSE, wc, lp);
         return 0;
     case WM_CLOSE:

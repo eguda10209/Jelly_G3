@@ -45,4 +45,8 @@ public:
 
 	/*combo btb pieces max_height‚ÌXV*/
 	void updata_board_status(short clear_lines, enum Rotation_type rot_type, bool use_hold);
+
+	void update_board_by_memory(short player_num, short nexts);
+
+	void update_board_data(short player_num);
 };

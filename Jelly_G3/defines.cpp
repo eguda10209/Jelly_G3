@@ -1,4 +1,4 @@
-#include "include.h"
+#include "defines.h"
 
 unsigned short Defines::piece[7][4][4] = { {	{ 0b0110, 0b1100, 0b0000, 0b0000 },
 											{ 0b0100, 0b0110, 0b0010, 0b0000 },

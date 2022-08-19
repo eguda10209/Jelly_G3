@@ -110,11 +110,27 @@ void debug() {
 
 
 	for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;*/
+	
+	board.hold_piece = 0;
+	board.next_piece[0] = 1;
+	board.next_piece[1] = 2;
+	board.next_piece[2] = 3;
+	board.next_piece[3] = 4;
+	board.next_piece[4] = 5;
+	board.next_piece[5] = 6;
 
-	board.hold_piece = 3;
-	board.next_piece[0] = 4;
-	board.next_piece[1] = 5;
+	Solution opt_sol = ev.find_optimal_solution(board, PIECE_SPAWN_X, PIECE_SPAWN_Y, 0);
+	Comment(TEXT("depth: "), opt_sol.depth, 1);
+	Comment(TEXT("nodes: "), opt_sol.nodes, 1);
+	Comment(TEXT("score: "), opt_sol.score, 1);
 
-	ev.find_optimal_solution(board, PIECE_SPAWN_X, PIECE_SPAWN_Y, 0);
+	for (int i = 0; i < opt_sol.moves_data.size(); i++) {
+		for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(opt_sol.moves_data[i]->board->board[y]) << endl; ofs << endl; 
+	}
+
+	for (int i = 0; i < opt_sol.moves_data.size(); i++) {
+		free(opt_sol.moves_data[i]->board);
+		free(opt_sol.moves_data[i]);
+	}
 }
 

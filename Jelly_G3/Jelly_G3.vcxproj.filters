@@ -51,6 +51,12 @@
     <ClInclude Include="evaluation.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="bot.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="controller.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="window.cpp">
@@ -75,6 +81,12 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="evaluation.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="bot.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="controller.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

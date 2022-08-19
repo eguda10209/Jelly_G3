@@ -1,16 +1,6 @@
 #pragma once
 #include "include.h"
 
-
-#define MOVE_HOLD 'H'
-#define MOVE_HARDDROP 'Q'
-#define MOVE_SOFTDROP 'S'
-#define MOVE_MOVE_LEFT 'L'
-#define MOVE_MOVE_RIGHT 'R'
-#define MOVE_MOVE_DOWN 'D'
-#define MOVE_ROTATE_LEFT 'M'
-#define MOVE_ROTATE_RIGHT 'K'
-
 //piece.h MOVES_BUFF_SIZE_MAXも更新する
 #define MOVES_SIZE_MAX 5
 #define MOVES_BUFF_MAX 100
@@ -31,8 +21,10 @@ typedef struct MCT_node {
 
 
 typedef struct Solution{
-	std::vector<class Piece_move_data> operation_data;
-	//最終的な評価値
+	float score = 0.0;
+	int depth = 0;
+	int nodes = 0;
+	std::vector<class Piece_move_data*> moves_data;
 };
 
 
@@ -42,6 +34,7 @@ public:
 	std::random_device rnd;
 
 	/*最適解を計算*/
+	/*戻り値： struct Solution	使用後、moves_data内データすべてに対して、Piece_move_data内のboardをメモリ解放 -> Piece_move_dataをメモリ解放*/
 	Solution find_optimal_solution(class Board initial_board, short spawn_x, short spawn_y, short spawn_r);
 
 	/*盤面の評価値を計算*/

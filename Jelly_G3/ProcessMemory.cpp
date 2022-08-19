@@ -31,21 +31,20 @@ intptr_t ProcessMemory::ReadBytes(LPCVOID addr, int bytes) {
 int ProcessMemory::GetHoldmino(int player) {
 	int addr;
 	addr = ReadMemory((LPCVOID)(
-		(INT64)ReadMemory((LPCVOID)(
 			(INT64)ReadMemory((LPCVOID)(
 				(INT64)ReadMemory((LPCVOID)(
 					(INT64)ReadMemory((LPCVOID)0x000140461B20)
 					+ 0x378 + (player - 1) * 0x8))
 				+ 0xA8))
-			+ 0x3D0))
-		+ 0x8));
+			+ 0x3D0));
+	if (addr == 0) return -1;
+	addr = ReadMemory((LPCVOID)(addr + 0x8));
 	if (addr < 10) {
 		return addr;
 	}
 	else {
-		return 8;
+		return 10;
 	}
-
 }
 
 int ProcessMemory::GetCurrentmino(int player) {
@@ -133,24 +132,47 @@ int ProcessMemory::GetFrames() {
 
 }
 
-int ProcessMemory::GetScore() {
+int ProcessMemory::GetScore(int player) {
 	int addr;
 	addr = ReadMemory((LPCVOID)(
-		(INT64)ReadMemory((LPCVOID)0x00014057F048)
-		+ 0x38));
+		(INT64)ReadMemory((LPCVOID)(
+			(INT64)ReadMemory((LPCVOID)(
+				(INT64)ReadMemory((LPCVOID)0x000140461B20)
+				+ 0x378 + (player - 1) * 0x8))
+			+ 0xe0))
+		+ 0x3C));
 	return addr;
 
 }
 
-int ProcessMemory::GetLinesCleared() {
+int ProcessMemory::GetLinesCleared(int player) {
 	int addr;
-	addr = ReadBytes((LPCVOID)(
-		(INT64)ReadMemory((LPCVOID)(
+	switch (player)
+	{
+	case 1:
+		addr = ReadMemory((LPCVOID)(
 			(INT64)ReadMemory((LPCVOID)(
-				(INT64)ReadMemory((LPCVOID)0x000140461B20)
-				+ 0x378))
-			+ 0xA8))
-		+ 0x2F8), 1);
+				(INT64)ReadMemory((LPCVOID)(
+					(INT64)ReadMemory((LPCVOID)0x000140461B20)
+					+ 0x378))
+				+ 0xA8))
+			+ 0x2F8)) & 0xFF;
+		break;
+	case 2:
+		addr =
+			ReadMemory((LPCVOID)(
+				(INT64)ReadMemory((LPCVOID)(
+					(INT64)ReadMemory((LPCVOID)(
+						(INT64)ReadMemory((LPCVOID)(
+							(INT64)ReadMemory((LPCVOID)(
+								(INT64)ReadMemory((LPCVOID)0x140461B20)
+								+ 0x378))
+							+ 0xA8))
+						+ 0x270))
+					+ 0x20))
+				+ 0x2F8)) & 0xFF;
+		break;
+	}
 	return addr;
 
 }
@@ -245,27 +267,11 @@ int ProcessMemory::GameState(int player) {
 					+ 0x378 + (player - 1) * 0x8))
 				+ 0xC0))
 			+ 0x10))
-		+ 0x80))
-		;
+		+ 0x80));
 
 	return addr;
 }
 
-bool ProcessMemory::IsPause(int player) {
-	/*int addr = ReadMemory((LPCVOID)(
-		(INT64)ReadMemory((LPCVOID)(
-			(INT64)ReadMemory((LPCVOID)(
-				(INT64)ReadMemory((LPCVOID)(
-					(INT64)ReadMemory((LPCVOID)0x140598A20)
-					+ 0x138))
-				+ 0x18))
-			+ 0x100))
-		+ 0x58));*/
-	int addr = ReadMemory((LPCVOID)(
-		(INT64)ReadMemory((LPCVOID)0x140461B20)
-		+ 0x208));
-	return addr;
-}
 
 int ProcessMemory::GetGarbageLines(int player) {
 	int addr0, addr1, garbagelines = 0;
@@ -305,50 +311,61 @@ int ProcessMemory::GetGarbageLines(int player) {
 	return garbagelines;
 }
 
-bool ProcessMemory::IsHoldEmpty(int player) {
-	int addr;
-	switch (player)
-	{
-	case 1:
-		addr = ReadMemory((LPCVOID)(
+//btb = true‚Ìê‡A+256‚³‚ê‚é
+short ProcessMemory::GetComboAndBtb(int player) {
+	short addr = ReadMemory((LPCVOID)(
+		(INT64)ReadMemory((LPCVOID)(
 			(INT64)ReadMemory((LPCVOID)(
-				(INT64)ReadMemory((LPCVOID)(
-					(INT64)ReadMemory((LPCVOID)(
-						(INT64)ReadMemory((LPCVOID)0x000140461B20)
-						+ 0x378))
-					+ 0xA8))
-				+ 0x3D0))
-			+ 0x8));
-		break;
-
-	case 2:
-		addr = ReadMemory((LPCVOID)(
-			(INT64)ReadMemory((LPCVOID)(
-				(INT64)ReadMemory((LPCVOID)(
-					(INT64)ReadMemory((LPCVOID)(
-						(INT64)ReadMemory((LPCVOID)0x000140461B20)
-						+ 0x378 + 0x8))
-					+ 0xA8))
-				+ 0x3D0))
-			+ 0x8));
-		break;
-	default:
-		break;
-	}
-
-	if (!(addr >= 0 && addr <= 6)) return true;
-	else return false;
+				(INT64)ReadMemory((LPCVOID)0x000140461B20)
+				+ 0x378 + (player - 1) * 0x8))
+			+ 0xA8))
+		+ 0x3DC)) & 0xFFFF;
+	return addr;
 }
 
 int ProcessMemory::test() {
 	int addr = ReadMemory((LPCVOID)(
+					(INT64)ReadMemory((LPCVOID)0x14057F048)
+					+ 0x38 + 0 * 0x04));
+
+	addr = ReadMemory((LPCVOID)(
+		(INT64)ReadMemory((LPCVOID)(
+			(INT64)ReadMemory((LPCVOID)(
+				(INT64)ReadMemory((LPCVOID)0x000140461B20)
+				+ 0x378 + (1 - 1) * 0x8))
+			+ 0xA8))
+		+ 0x3D0 + 0x23c));
+
+	addr = ReadMemory((LPCVOID)(
+		(INT64)ReadMemory((LPCVOID)(
+				(INT64)ReadMemory((LPCVOID)0x000140461B20)
+				+ 0x378 + (1 - 1) * 0x8))
+			+ 0xA8))
+		+ 0x3D0;
+
+
+	addr = ReadMemory((LPCVOID)(
 		(INT64)ReadMemory((LPCVOID)(
 			(INT64)ReadMemory((LPCVOID)(
 				(INT64)ReadMemory((LPCVOID)(
 					(INT64)ReadMemory((LPCVOID)0x000140461B20)
-					+ 0x378))
-				+ 0x28))
-			+ 0xD0))
-		+ 0x3c));
+					+ 0x378 + (1 - 1) * 0x8))
+				+ 0xA8))
+			+ 0x3C8))
+		+ 0x8 + 0x804));
+
+	addr = ReadMemory((LPCVOID)(
+		(INT64)ReadMemory((LPCVOID)(
+			(INT64)ReadMemory((LPCVOID)(
+				(INT64)ReadMemory((LPCVOID)0x000140461B20)
+				+ 0x378 + (2 - 1) * 0x8))
+			+ 0xe0))
+		+ 0x3C));
+	/*addr = ReadMemory((LPCVOID)(
+		(INT64)ReadMemory((LPCVOID)0x140460690)
+		+ 0x280));*/
+
+	//return ReadMemory((LPCVOID)(0x140573A78));
+		 
 	return addr;
 }

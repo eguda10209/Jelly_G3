@@ -16,17 +16,17 @@ public:
 	static int GetBoard(int, int, int);
 	static bool IsGame();
 	static int GetFrames();
-	static int GetScore();
-	static int GetLinesCleared();
+	static int GetScore(int player);
+	static int GetLinesCleared(int player);
 	static int GetY(int player);
 	static int GetX(int player);
 	static int GetRotation(int player);
 	static bool IsCharacterSelect();
 	static int GetCharacter(int player);
 	static int GameState(int player);
-	static bool IsPause(int player);
 	static int GetGarbageLines(int player);
-	static bool IsHoldEmpty(int player);
+	static short GetComboAndBtb(int player);
 	static int test();
+
 };
 

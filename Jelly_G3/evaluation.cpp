@@ -1,9 +1,6 @@
 #include "evaluation.h"
 
 Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, short spawn_y, short spawn_r) {
-
-
-	std::srand(time(NULL));
 	Solution opt_sol;
 	//展開するノードの選択
 	//展開 find_peice_moves(展開するノードの盤面、設置するミノ、上段操作モードか)
@@ -24,6 +21,10 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 	expanded_pmds = find_peice_moves(initial_board, spawn_x, spawn_y, spawn_r, false);
 	pmds = find_peice_moves(initial_board, spawn_x, spawn_y, spawn_r, true);
 	for (int i = 0; i < pmds.size(); i++) expanded_pmds.push_back(pmds[i]);
+	if (expanded_pmds.size() == 0) {
+		Comment(TEXT("dead"), 0, 0);
+		return opt_sol;
+	}
 
 	//初期ノードの評価 todo 死亡する場合はEを0にする
 	float best_E = 0.0;
@@ -48,6 +49,7 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 
 	//初期ノード評価の逆伝搬
 	root_nodes.eval_value = best_E;
+	opt_sol.depth = 1;
 
 	std::ofstream ofs("./ev_debug.txt");
 	ofs << "start" << std::endl;
@@ -58,6 +60,7 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 		//展開するノードの選択
 		MCT_node* select_node = &root_nodes;
 		MCT_node* expand_node = NULL;
+		int exp_depth = 0;
 		while (true) {
 			int children_size = select_node->children_size;
 			if (children_size == 0) {
@@ -97,7 +100,9 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 			select_node = np;
 
 			free(p);
+			exp_depth++;
 		}
+		if (opt_sol.depth < exp_depth) opt_sol.depth = exp_depth;
 
 		/*展開*/
 		Board* b_tmp = (*(*expand_node).pmd).board->copy_board();
@@ -114,9 +119,13 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 		//board.copy_boardの中身を一つずつコピーするように変更
 		//expanded_pmds = find_peice_moves(*b_tmp, spawn_x, spawn_y, spawn_r, true); -> std::vector<Piece_move_data> n_pmds = find_peice_moves(*b_tmp, spawn_x, spawn_y, spawn_r, true);
 		//理由は不明
-		pmds = find_peice_moves(*b_tmp, spawn_x, spawn_y, spawn_r, false);
-		for (int i = 0; i < pmds.size(); i++) n_pmds.push_back(pmds[i]);
+		std::vector<Piece_move_data*> pmds_2 = find_peice_moves(*b_tmp, spawn_x, spawn_y, spawn_r, false);
+		for (int i = 0; i < pmds_2.size(); i++) n_pmds.push_back(pmds_2[i]);
 		free(b_tmp);
+		if (n_pmds.size() == 0) {
+			continue;
+			Comment(TEXT("moves size: 0"), 0, 0);
+		}
 
 		/*評価 & 追加*/
 		best_E = 0.0;
@@ -143,8 +152,8 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 		/*逆伝搬 (親ノードのEを更新しる葉を最適解とする)*/
 		MCT_node* p_node = expand_node;
 		while (true) {
-			if (expand_node->eval_value < best_E) {
-				expand_node->eval_value = best_E;
+			if (p_node->eval_value < best_E) {
+				p_node->eval_value = best_E;
 			}
 			else break;
 
@@ -160,17 +169,28 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 		if (exp_cnt >= 2) break;
 	}
 	
+	/*最適解情報*/
+	opt_sol.score = root_nodes.eval_value;
+	MCT_node* opt_node_tmp = opt_leaf_node;
+	while (true){
+		if (opt_node_tmp->parent_node == NULL) break;
+		Piece_move_data* pmd_tmp = (Piece_move_data*)malloc(sizeof(Piece_move_data));
+		*pmd_tmp = *opt_node_tmp->pmd;
+		pmd_tmp->board = (*(*opt_node_tmp).pmd).board->copy_board();
+		opt_sol.moves_data.insert(opt_sol.moves_data.begin(), pmd_tmp);
+		opt_node_tmp = opt_node_tmp->parent_node;
+	}
+
 
 	for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << std::bitset<10>(opt_leaf_node->pmd->board->board[y]) << std::endl; ofs << std::endl;
 
 	//free
-	for (int i = 0; i < all_nodes.size(); i++) {
+	int all_nodes_size = all_nodes.size();
+	opt_sol.nodes = all_nodes_size;
+	for (int i = 0; i < all_nodes_size; i++) {
 		if (all_nodes[i]->pmd->board != NULL) free(all_nodes[i]->pmd->board);
-		else Comment(TEXT("a"), 0, 0);
 		if (all_nodes[i]->pmd != NULL) free(all_nodes[i]->pmd); 
-		else Comment(TEXT("b"), 0, 0);
 		if(all_nodes[i] != NULL) free(all_nodes[i]);
-		else Comment(TEXT("c"), 0, 0);
 	}
 	return opt_sol;
 }
@@ -224,6 +244,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 			pmd->to_r = r;
 			pmd->to_x = piece.x;
 			pmd->rot_type = Normal;
+			pmd->use_hold = use_hold;
 			pmd->moves[pmd->moves_size] = MOVE_HARDDROP;
 			pmd->moves_size++;
 
@@ -288,6 +309,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 			pmd->moves_size = 0;
 			pmd->to_r = r;
 			pmd->rot_type = Normal;
+			pmd->use_hold = use_hold;
 			pmd->moves[pmd->moves_size] = MOVE_HARDDROP;
 			pmd->moves_size++;
 			pmd->to_x = piece.x + dx;
@@ -314,6 +336,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 			pmd->moves_size = 0;
 			pmd->to_r = r;
 			pmd->rot_type = Normal;
+			pmd->use_hold = use_hold;
 			pmd->moves[pmd->moves_size] = MOVE_HARDDROP;
 			pmd->moves_size++;
 			pmd->to_x = piece.x + dx;
@@ -338,6 +361,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 	int Sind = 0, Eind = result.size();
 	bool exit_loop = false;
 	int add_move_cnt = 0;
+	int result_ind_cnt = Eind;
 	Piece_move_data pmd_i;
 	while (true) {
 		if (exit_loop) break;
@@ -346,11 +370,6 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 		Eind = result.size();
 		if (Sind == Eind) break;
 		for (int i = Sind; i < Eind; i++) {
-			if (i > MOVES_BUFF_MAX) {
-				exit_loop = true;
-				break;
-			}
-			
 			pmd_i = *result[i];
 			if (add_move_cnt == 0) pmd_i.moves[pmd_i.moves_size - 1] = MOVE_SOFTDROP;
 			pmd_i.rot_type = Normal;
@@ -365,6 +384,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				piece.x = pmd->last_x;
 				piece.y = pmd->last_y;
 				piece.r = pmd->last_r;
+				pmd->use_hold = use_hold;
 				pmd->board = board.copy_board();
 				pmd->clear_lines = pmd->board->try_place(&piece, -1, 0, Rotate_null, false);
 				if (pmd->clear_lines != -1) {
@@ -374,6 +394,11 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 					pmd->board->updata_board_status(pmd->clear_lines, pmd->rot_type, use_hold);
 					if ((pmd->board->max_height>= UPPER_MOVE_Y_TH || is_meaningful_move(&board, piece)) && (pmd->last_y < Defines::Gameover_y[piece.type][piece.r])) {
 						result.push_back(pmd);
+						result_ind_cnt++;
+						if (result_ind_cnt >= MOVES_BUFF_MAX) {
+							exit_loop = true;
+							break;
+						}
 					}
 					else free(pmd->board);
 				}
@@ -388,6 +413,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				piece.x = pmd->last_x;
 				piece.y = pmd->last_y;
 				piece.r = pmd->last_r;
+				pmd->use_hold = use_hold;
 				pmd->board = board.copy_board();
 				pmd->clear_lines = pmd->board->try_place(&piece, 1, 0, Rotate_null, false);
 				if (pmd->clear_lines != -1) {
@@ -397,6 +423,11 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 					pmd->board->updata_board_status(pmd->clear_lines, pmd->rot_type, use_hold);
 					if ((pmd->board->max_height >= UPPER_MOVE_Y_TH || is_meaningful_move(&board, piece)) && (pmd->last_y < Defines::Gameover_y[piece.type][piece.r])) {
 						result.push_back(pmd);
+						result_ind_cnt++;
+						if (result_ind_cnt >= MOVES_BUFF_MAX) {
+							exit_loop = true;
+							break;
+						}
 					}
 					else free(pmd->board);
 				}
@@ -411,6 +442,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				piece.x = pmd->last_x;
 				piece.y = pmd->last_y;
 				piece.r = pmd->last_r;
+				pmd->use_hold = use_hold;
 				pmd->board = board.copy_board();
 				pmd->clear_lines = pmd->board->try_place(&piece, 0, -1, Rotate_null, false);
 				if (pmd->clear_lines != -1) {
@@ -420,6 +452,11 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 					pmd->board->updata_board_status(pmd->clear_lines, pmd->rot_type, use_hold);
 					if ((pmd->board->max_height >= UPPER_MOVE_Y_TH || is_meaningful_move(&board, piece)) && (pmd->last_y < Defines::Gameover_y[piece.type][piece.r])) {
 						result.push_back(pmd);
+						result_ind_cnt++;
+						if (result_ind_cnt >= MOVES_BUFF_MAX) {
+							exit_loop = true;
+							break;
+						}
 					}
 					else free(pmd->board);
 				}
@@ -434,6 +471,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				piece.x = pmd->last_x;
 				piece.y = pmd->last_y;
 				piece.r = pmd->last_r;
+				pmd->use_hold = use_hold;
 				if (piece.type == PIECE_TYPE_T) {
 					pmd->rot_type = get_rotation_type(&board, piece, Rotate_right);
 				}
@@ -446,6 +484,11 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 					pmd->board->updata_board_status(pmd->clear_lines, pmd->rot_type, use_hold);
 					if ((pmd->board->max_height >= UPPER_MOVE_Y_TH || pmd->rot_type != Normal || is_meaningful_move(&board, piece)) && (pmd->last_y < Defines::Gameover_y[piece.type][piece.r])) {
 						result.push_back(pmd);
+						result_ind_cnt++;
+						if (result_ind_cnt >= MOVES_BUFF_MAX) {
+							exit_loop = true;
+							break;
+						}
 					}
 					else free(pmd->board);
 				}
@@ -460,6 +503,7 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				piece.x = pmd->last_x;
 				piece.y = pmd->last_y;
 				piece.r = pmd->last_r;
+				pmd->use_hold = use_hold;
 				if (piece.type == PIECE_TYPE_T) {
 					pmd->rot_type = get_rotation_type(&board, piece, Rotate_left);
 				}
@@ -472,6 +516,11 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 					pmd->board->updata_board_status(pmd->clear_lines, pmd->rot_type, use_hold);
 					if ((pmd->board->max_height >= UPPER_MOVE_Y_TH || pmd->rot_type != Normal || is_meaningful_move(&board, piece)) && (pmd->last_y < Defines::Gameover_y[piece.type][piece.r])) {
 						result.push_back(pmd);
+						result_ind_cnt++;
+						if (result_ind_cnt >= MOVES_BUFF_MAX) {
+							exit_loop = true;
+							break;
+						}
 					}
 					else free(pmd->board);
 				}
