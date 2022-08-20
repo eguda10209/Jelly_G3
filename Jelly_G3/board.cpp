@@ -166,6 +166,8 @@ void Board::updata_board_status(short clear_lines, Rotation_type rot_type, bool 
 	this->next_piece[NEXT_MAX - 1] = -1;
 
 	//combo, btbXV
+	this->b_btb = this->btb;
+	this->b_combo = this->combo;
 	if (clear_lines == 0) {
 		this->combo = -1;
 		this->btb = false;
@@ -220,6 +222,8 @@ void Board::update_board_by_memory(short player_num, short nexts) {
 	}
 
 	/*combo & btb*/
+	this->b_btb = this->btb;
+	this->b_combo = this->combo;
 	short combo_btb = ProcessMemory::GetComboAndBtb(player_num);
 	if (combo_btb >= 0xFF) {
 		combo = combo_btb - 0xFF - 1;

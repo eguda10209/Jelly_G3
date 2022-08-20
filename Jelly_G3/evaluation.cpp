@@ -27,7 +27,7 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 	}
 
 	//初期ノードの評価 todo 死亡する場合はEを0にする
-	float best_E = 0.0;
+	float best_E = -20000.0;
 	float E = 0.0;
 	for (int i = 0; i < expanded_pmds.size(); i++) {
 		MCT_node *node = (MCT_node*) malloc(sizeof(MCT_node));
@@ -35,7 +35,7 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 		node->parent_node = &root_nodes;
 		node->pmd = expanded_pmds[i];
 		node->eval_value = get_evaluation_value(node->pmd->board);
-		node->reward_value = get_reward_value(node->pmd);
+		node->reward_value = get_reward_value(node->pmd->board, node->pmd);
 		node->children_size = 0;
 
 		root_nodes.children_node[root_nodes.children_size] = node;
@@ -128,7 +128,7 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 		}
 
 		/*評価 & 追加*/
-		best_E = 0.0;
+		best_E = -20000.0;
 		MCT_node* best_E_node = NULL;
 		for (int i = 0; i < n_pmds.size(); i++) {
 			MCT_node* node = (MCT_node*)malloc(sizeof(MCT_node));
@@ -136,7 +136,7 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 			node->parent_node = expand_node;
 			node->pmd = n_pmds[i];
 			node->eval_value = get_evaluation_value(node->pmd->board);
-			node->reward_value = get_reward_value(node->pmd);
+			node->reward_value = get_reward_value(node->pmd->board, node->pmd);
 			node->children_size = 0;
 
 			expand_node->children_node[expand_node->children_size] = node;
@@ -144,7 +144,6 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 			E = node->eval_value + node->reward_value;
 			if (E > best_E) {
 				best_E = E;
-				opt_leaf_node = node;
 				best_E_node = node;
 			}
 		}
@@ -166,18 +165,21 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 			}
 		}
 		exp_cnt++;
-		if (exp_cnt >= 2) break;
+		if (exp_cnt >= 300) break;
 	}
 	
 	/*最適解情報*/
 	opt_sol.score = root_nodes.eval_value;
 	MCT_node* opt_node_tmp = opt_leaf_node;
+	opt_sol.moves_data_size = 0;
 	while (true){
 		if (opt_node_tmp->parent_node == NULL) break;
 		Piece_move_data* pmd_tmp = (Piece_move_data*)malloc(sizeof(Piece_move_data));
 		*pmd_tmp = *opt_node_tmp->pmd;
 		pmd_tmp->board = (*(*opt_node_tmp).pmd).board->copy_board();
-		opt_sol.moves_data.insert(opt_sol.moves_data.begin(), pmd_tmp);
+		opt_sol.moves_data[opt_sol.moves_data_size] = pmd_tmp;
+		opt_sol.moves_data_size++;
+		//opt_sol.moves_data.insert(opt_sol.moves_data.begin(), pmd_tmp);
 		opt_node_tmp = opt_node_tmp->parent_node;
 	}
 
@@ -196,20 +198,88 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 }
 
 float Evaluation::get_evaluation_value(Board* board) {
-
-	float result = 1.0;
-	result = rnd() % 50;
+	float result = 50.0;
+	short heights[10];
+	for (int i = 0; i < 10; i++) {
+		heights[i] = get_heights(board, i);
+	}
+	result += get_holes(board, heights) * (-1);
+	result += board->max_height * (-1);
 		//地形評価
 	//ネクスト評価
 	return result;
 }
 
-float Evaluation::get_reward_value(Piece_move_data *pmd) {
-	float result = 0.0;
-	result = rnd() % 50;
+float Evaluation::get_reward_value(Board* board, Piece_move_data *pmd) {
+	float result = 50.0;
+	/*attk_type*/
+	Attk_type attk_type;
+	if (board->board[0] == BOARD_EMPTY) attk_type = PerfectClear;
+	else if (pmd->clear_lines == 0 && pmd->rot_type == Normal) attk_type = None;
+	else if (pmd->clear_lines == 1 && pmd->rot_type == Normal) attk_type = LineClear1;
+	else if (pmd->clear_lines == 2 && pmd->rot_type == Normal) attk_type = LineClear2;
+	else if (pmd->clear_lines == 3 && pmd->rot_type == Normal) attk_type = LineClear3;
+	else if (pmd->clear_lines == 4) attk_type = Tetris;
+	else if (pmd->rot_type == TSpinmini) attk_type = TSpinMini_;
+	else if (pmd->clear_lines == 1 && pmd->rot_type == TSpin) attk_type = TSpin1;
+	else if (pmd->clear_lines == 2 && pmd->rot_type == TSpin) attk_type = TSpin2;
+	else if (pmd->clear_lines == 3 && pmd->rot_type == TSpin) attk_type = TSpin3;
+
 	//火力
+	result += get_attk(board, pmd, attk_type) * 5;
+
+	if (attk_type == LineClear1) result += -2;
+	else if (attk_type == LineClear2) result += -2;
+	else if (attk_type == LineClear3) result += -1;
+
 	//置くのにかかる時間
 	return result;
+}
+
+short Evaluation::get_attk(Board* board, Piece_move_data* pmd, Attk_type attk_type) {
+	short attk = 0;
+	short b_ren_bonus = 0;	//設置前の累計連ボーナス
+	short c_ren_bonus = 0;	//設置による連ボーナス
+	if(board->b_combo >= 0 && board->b_combo <= 10) b_ren_bonus = Defines::ren_bonus[board->b_combo];
+	else {
+		b_ren_bonus = Defines::ren_bonus[10];
+		b_ren_bonus += (board->b_combo - 10) * 5;
+	}
+	if (board->combo >= 1 && board->combo <= 10) c_ren_bonus = Defines::ren_bonus[board->combo] - Defines::ren_bonus[board->combo - 1];
+	else {
+		c_ren_bonus = 5;
+	}
+
+	if (attk_type == PerfectClear) attk = 10;
+	else if (attk_type == LineClear2) attk = 1;
+	else if (attk_type == LineClear3) attk = 2;
+	else {
+		if (attk_type == Tetris) attk = 4;
+		else if (attk_type == TSpinMini_) attk = 0;
+		else if (attk_type == TSpin1) attk = 2;
+		else if (attk_type == TSpin2) attk = 4;
+		else if (attk_type == TSpin3) attk = 6;
+		if (board->b_btb) attk++;
+	}
+
+	return attk + b_ren_bonus + c_ren_bonus;
+}
+
+short Evaluation::get_heights(Board* board, short x) {
+	for (int y = board->max_height - 1; y >= 0; y--) {
+		if ((board->board[y] & (0b1000000000 >> x)) != 0) return y + 1;
+	}
+	return 0;
+}
+
+short Evaluation::get_holes(Board* board, short heights[10]) {
+	short holes = 0;
+	for (int x = 0; x < 10; x++) {
+		for (short y = heights[x] - 2; y >= 0; y--) {
+			if ((board->board[y] & (0b1000000000 >> x)) == 0) holes++;
+		}
+	}
+	return holes;
 }
 
 // todo 同じ置き方だが別の操作方法で置いている場合もある
@@ -250,14 +320,14 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 
 			piece_nomove = start_piece;
 			if (r == 1) {
-				if (piece_nomove.rotate(&board, Rotate_right) == -1) continue;
+				if (piece_nomove.rotate(&board, Rotate_right) == false) continue;
 			}
 			else if (r == 2) {
-				if (piece_nomove.rotate(&board, Rotate_right) == -1) continue;
-				if (piece_nomove.rotate(&board, Rotate_right) == -1) continue;
+				if (piece_nomove.rotate(&board, Rotate_right) == false) continue;
+				if (piece_nomove.rotate(&board, Rotate_right) == false) continue;
 			}
 			else if (r == 3) {
-				if (piece_nomove.rotate(&board, Rotate_left) == -1) continue;
+				if (piece_nomove.rotate(&board, Rotate_left) == false) continue;
 			}
 
 			//初期位置に設置できるか。

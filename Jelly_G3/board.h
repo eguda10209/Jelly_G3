@@ -18,6 +18,8 @@ public:
 	short combo;
 	bool btb;
 	char hold_piece;
+	bool b_btb;
+	char b_combo;
 	//std::vector<char> next_piece{ 12 };　//->copy_board()でメモリアクセスエラーが起きる
 	char next_piece[NEXT_MAX];
 

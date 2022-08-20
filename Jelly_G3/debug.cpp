@@ -4,8 +4,8 @@ using namespace std;
 void set_debug_board(Board *board) {
 	board->reset_board();
 	board->board[2] = 0b1011001111;
-	board->board[1] = 0b1111000111;
-	board->board[0] = 0b1111101111;
+	board->board[1] = 0b1111000110;
+	board->board[0] = 0b1111101110;
 
 }
 
@@ -111,7 +111,7 @@ void debug() {
 
 	for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;*/
 	
-	board.hold_piece = 0;
+	/*board.hold_piece = 0;
 	board.next_piece[0] = 1;
 	board.next_piece[1] = 2;
 	board.next_piece[2] = 3;
@@ -131,6 +131,14 @@ void debug() {
 	for (int i = 0; i < opt_sol.moves_data.size(); i++) {
 		free(opt_sol.moves_data[i]->board);
 		free(opt_sol.moves_data[i]);
+	}*/
+/*
+set_debug_board(&board);
+for (int y = BOARD_HEIGHT - 1 - 15; y >= 0; y--) ofs << bitset<10>(board.board[y]) << endl; ofs << endl;
+	short heights[10];
+	for (int i = 0; i < 10; i++) {
+		heights[i] = ev.get_heights(&board, i);
 	}
+	 ofs << ev.get_holes(&board, heights);*/
 }
 

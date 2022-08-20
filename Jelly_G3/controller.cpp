@@ -19,7 +19,6 @@ int Controller::move(Piece_move_data pmd, short player_num) {
     int ret, try_cnt = 0;
     while (true) {
         if (try_cnt >= 10) {
-            Comment(TEXT("timeout"), 0, 0);
             return -1;
         }
         dx = pmd.to_x + 1 - ProcessMemory::GetX(player_num);

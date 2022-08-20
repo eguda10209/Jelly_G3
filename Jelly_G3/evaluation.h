@@ -7,6 +7,19 @@
 
 #define UPPER_MOVE_Y_TH 16
 
+typedef enum Attk_type {
+	None,
+	LineClear1,
+	LineClear2,
+	LineClear3,
+	Tetris,
+	TSpinMini_,
+	TSpin1,
+	TSpin2,
+	TSpin3,
+	PerfectClear
+};
+
 //MCTSノード
 typedef struct MCT_node {
 	float eval_value = 0;
@@ -24,7 +37,9 @@ typedef struct Solution{
 	float score = 0.0;
 	int depth = 0;
 	int nodes = 0;
-	std::vector<class Piece_move_data*> moves_data;
+	class Piece_move_data* moves_data[10];
+	int moves_data_size = 0;
+	//std::vector<class Piece_move_data*> moves_data;
 };
 
 
@@ -41,7 +56,7 @@ public:
 	float get_evaluation_value(class Board *board);
 
 	/*あるミノの操作パターンを与え、盤面に設置することによる報酬を計算*/
-	float get_reward_value(class Piece_move_data *pmd);
+	float get_reward_value(class Board* board, class Piece_move_data *pmd);
 
 	/*操作可能なパターンを作成（start_pieceの場所から移動可能なもの）
 	引数: 盤面(すべての情報を入れたもの(next_piece, btbなど))、スポーン時のx,y,r、ホールド使用の有無を指定
@@ -54,4 +69,9 @@ public:
 
 	enum Rotation_type get_rotation_type(class Board* board, class Piece piece, enum Rotation rotation);
 
+
+
+	short get_heights(class Board* board, short x);
+	short get_holes(class Board* board, short heights[10]);
+	short get_attk(class Board* board, class Piece_move_data* pmd, Attk_type attk_type);
 };

@@ -12,4 +12,6 @@ public:
 
 	static short Gameover_y[7][4];
 
+	static short ren_bonus[11];
+
 };
