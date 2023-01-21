@@ -1,4 +1,7 @@
 #include "bot.h"
+#define _CRTDBG_MAP_ALLOC
+#include <cstdlib>
+#include <crtdbg.h>
 
 using namespace std;
 
@@ -31,6 +34,7 @@ Bot::~Bot() {
 }
 
 void Bot::run_bot() {
+    //_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
     if (!GetIsAION()) return;
     if (GetForegroundWindow() != FindWindow(TEXT("TetPuyo"), TEXT("PuyoPuyoTetris"))) return; // ぷよテトが最前面でなければ終了 
 	
@@ -51,8 +55,9 @@ void Bot::run_bot() {
     if (!is_find_next_opt_sol) { //次の解が未探索の場合
         /*盤面情報取得*/
         this->board->update_board_by_memory(this->player_num, this->nexts);
-
-        opt_sol = evaluation->find_optimal_solution(*(this->board), PIECE_SPAWN_X, PIECE_SPAWN_Y, PIECE_SPAWN_R);
+        
+        this->IsMoveFinished = 100;
+        opt_sol = evaluation->find_optimal_solution(*(this->board), PIECE_SPAWN_X, PIECE_SPAWN_Y, PIECE_SPAWN_R, &IsMoveFinished);
         if (opt_sol.moves_data_size == 0) return;    //死亡
     }
     else {
@@ -61,16 +66,17 @@ void Bot::run_bot() {
             opt_sol.moves_data[opt_sol.moves_data_size - 1]->board->next_piece[i] = this->board->next_piece[i + 1];
         }
         if (opt_sol.moves_data_size == 0) return;    //死亡
-        Comment(TEXT("using nt"), 0, 0);
+        //Comment(TEXT("using nt"), 0, 0);
     }
     executed_free_opt_sol = false;
 
     /*操作(並列処理)*/
-    std::thread move_thread(move_thread_func, *(opt_sol.moves_data[opt_sol.moves_data_size - 1]), this->player_num);
+    this->IsMoveFinished = -1;
+    std::thread move_thread(&Bot::move_thread_func, this, *(opt_sol.moves_data[opt_sol.moves_data_size - 1]), this->player_num);
 
     /*並列計算*/
     //Solution next_opt_sol_ = evaluation->find_optimal_solution(*(opt_sol.moves_data[0]->board), PIECE_SPAWN_X, PIECE_SPAWN_Y, PIECE_SPAWN_R);
-    *next_opt_sol = evaluation->find_optimal_solution(*(opt_sol.moves_data[opt_sol.moves_data_size - 1]->board), PIECE_SPAWN_X, PIECE_SPAWN_Y, PIECE_SPAWN_R);
+    *next_opt_sol = evaluation->find_optimal_solution(*(opt_sol.moves_data[opt_sol.moves_data_size - 1]->board), PIECE_SPAWN_X, PIECE_SPAWN_Y, PIECE_SPAWN_R, &IsMoveFinished);
     if (next_opt_sol->moves_data_size == 0) is_find_next_opt_sol = false;
     else is_find_next_opt_sol = true;
 
@@ -87,13 +93,28 @@ void Bot::run_bot() {
     for (int y = 0; y < 40; y++) {
         if (is_find_next_opt_sol) {
             if (opt_sol.moves_data[opt_sol.moves_data_size - 1]->board->board[y] != this->board->board[y]) {
-                is_find_next_opt_sol = false;
-                Comment(TEXT("move miss or garbage"), 0, 0);
-                for (int i = 0; i < next_opt_sol->moves_data_size; i++) {
-                    free(next_opt_sol->moves_data[i]->board);
-                    free(next_opt_sol->moves_data[i]);
+                //総数が4つ以上上昇 -> garbage
+                int b_cell_cnt = 0, r_cell_cnt = 0;
+                for (int y_ = 0; y_ < 40; y_++) {
+                    for (int x = 0; x < 10; x++) {
+                        if ((opt_sol.moves_data[opt_sol.moves_data_size - 1]->board->board[y_] & (0b1000000000 >> x)) != 0) b_cell_cnt++;
+                        if ((this->board->board[y_] & (0b1000000000 >> x)) != 0) r_cell_cnt++;
+                    }
                 }
-                break;
+                if (r_cell_cnt == b_cell_cnt || ((r_cell_cnt - b_cell_cnt) % 9) != 0) {//置きミス
+                    is_find_next_opt_sol = false; //置きミスの場合のみにするべき
+                    Comment(TEXT("miss"), 0, 0);
+                    for (int i = 0; i < next_opt_sol->moves_data_size; i++) {
+                        free(next_opt_sol->moves_data[i]->board);
+                        free(next_opt_sol->moves_data[i]);
+                    }
+                    break;
+                }
+                else {
+                    Comment(TEXT("garbage: "), (r_cell_cnt - b_cell_cnt) / 9, 1);
+                    //todo 盤面を更新する
+                    break;
+                }
             }
         }
     }
@@ -103,6 +124,7 @@ void Bot::run_bot() {
         free(opt_sol.moves_data[i]);
     }
     executed_free_opt_sol = true;
+    //_CrtDumpMemoryLeaks();
 }
 
 
@@ -150,4 +172,5 @@ void Bot::move_thread_func(Piece_move_data pmd, int player_num) {
     else if (final_clear_line == 2 || final_clear_line == 3) Controller::wait_frame(41);
     else if (final_clear_line == 4) Controller::wait_frame(46);
     //pcの場合は1
+    this->IsMoveFinished = 0;
 }

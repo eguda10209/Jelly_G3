@@ -1,6 +1,6 @@
 #include "evaluation.h"
 
-Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, short spawn_y, short spawn_r) {
+Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, short spawn_y, short spawn_r, int *expand_max) {
 	Solution opt_sol;
 	//展開するノードの選択
 	//展開 find_peice_moves(展開するノードの盤面、設置するミノ、上段操作モードか)
@@ -10,7 +10,7 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 	//評価の逆伝搬
 
 	std::vector<MCT_node*> all_nodes;	//全ノード
-
+	int debug_pushback_cnt = 0;
 
 	std::vector<Piece_move_data*> expanded_pmds;
 	MCT_node root_nodes;
@@ -165,7 +165,12 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 			}
 		}
 		exp_cnt++;
-		if (exp_cnt >= 300) break;
+		if (*expand_max >= 0) {
+			if (exp_cnt >= *expand_max) break;//300
+		}
+		else {
+			if (exp_cnt >= 3000) break;//300
+		}
 	}
 	
 	/*最適解情報*/
@@ -189,11 +194,23 @@ Solution Evaluation::find_optimal_solution(Board initial_board, short spawn_x, s
 	//free
 	int all_nodes_size = all_nodes.size();
 	opt_sol.nodes = all_nodes_size;
+	int free_cnt = 0;
 	for (int i = 0; i < all_nodes_size; i++) {
-		if (all_nodes[i]->pmd->board != NULL) free(all_nodes[i]->pmd->board);
-		if (all_nodes[i]->pmd != NULL) free(all_nodes[i]->pmd); 
-		if(all_nodes[i] != NULL) free(all_nodes[i]);
+		if (all_nodes[i]->pmd->board != NULL) {
+			free(all_nodes[i]->pmd->board);
+			free_cnt++;
+		}
+		if (all_nodes[i]->pmd != NULL){
+			free(all_nodes[i]->pmd); 
+			free_cnt++;
+		}
+		if(all_nodes[i] != NULL) {
+			free(all_nodes[i]);
+			free_cnt++;
+		}
 	}
+	//Comment(TEXT("all: "), all_nodes_size, 1); 
+	//Comment(TEXT("fc: "), free_cnt, 1);
 	return opt_sol;
 }
 
@@ -341,10 +358,16 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 						piece_nomove.y++;
 						piece = piece_nomove;
 					}
-					else break;
+					else {
+						free(pmd);
+						break;
+					}
+					free(pmd->board);
 					pmd->board = board.copy_board();
 					pmd->clear_lines = pmd->board->try_place(&piece, 0, 0, Rotate_null, true);
 					if (pmd->clear_lines == -1) {
+						free(pmd->board);
+						free(pmd);
 						break;
 					}
 					else {
@@ -355,10 +378,16 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 						if (pmd->last_y < Defines::Gameover_y[piece.type][piece.r]) {
 							result.push_back(pmd);
 						}
-						else free(pmd->board);
+						else {
+							free(pmd->board);
+							free(pmd);
+						}
 					}
 				}
-				else continue;
+				else {
+					free(pmd);
+					continue;
+				}
 			}
 			else {
 				pmd->last_x = piece.x;
@@ -368,7 +397,10 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				if (pmd->last_y < Defines::Gameover_y[piece.type][piece.r]) {
 					result.push_back(pmd);
 				}
-				else free(pmd->board);
+				else {
+					free(pmd->board);
+					free(pmd);
+				}
 			}
 		}
 
@@ -385,7 +417,11 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 			pmd->to_x = piece.x + dx;
 			pmd->board = board.copy_board();
 			pmd->clear_lines = pmd->board->try_place(&piece, dx, 0, Rotate_null, true);
-			if (pmd->clear_lines == -1) break;
+			if (pmd->clear_lines == -1) {
+				free(pmd->board);
+				free(pmd);
+				break;
+			}
 			else {
 				pmd->last_x = piece.x;
 				pmd->last_y = piece.y;
@@ -394,7 +430,10 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				if (pmd->last_y < Defines::Gameover_y[piece.type][piece.r]) {
 					result.push_back(pmd);
 				}
-				else free(pmd->board);
+				else {
+					free(pmd->board);
+					free(pmd);
+				}
 			}
 		}
 
@@ -412,7 +451,11 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 			pmd->to_x = piece.x + dx;
 			pmd->board = board.copy_board();
 			pmd->clear_lines = pmd->board->try_place(&piece, dx, 0, Rotate_null, true);
-			if (pmd->clear_lines == -1) break;
+			if (pmd->clear_lines == -1) {
+				free(pmd->board);
+				free(pmd);
+				break;
+			}
 			else {
 				pmd->last_x = piece.x;
 				pmd->last_y = piece.y;
@@ -421,7 +464,10 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 				if (pmd->last_y < Defines::Gameover_y[piece.type][piece.r]) {
 					result.push_back(pmd);
 				}
-				else free(pmd->board);
+				else {
+					free(pmd->board);
+					free(pmd);
+				}
 			}
 		}
 	}
@@ -470,7 +516,14 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 							break;
 						}
 					}
-					else free(pmd->board);
+					else {
+						free(pmd->board);
+						free(pmd);
+					}
+				}
+				else {
+					free(pmd->board);
+					free(pmd);
 				}
 			}
 
@@ -499,7 +552,14 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 							break;
 						}
 					}
-					else free(pmd->board);
+					else {
+						free(pmd->board);
+						free(pmd);
+					}
+				}
+				else {
+					free(pmd->board);
+					free(pmd);
 				}
 			}
 
@@ -528,7 +588,14 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 							break;
 						}
 					}
-					else free(pmd->board);
+					else {
+						free(pmd->board);
+						free(pmd);
+					}
+				}
+				else {
+					free(pmd->board);
+					free(pmd);
 				}
 			}
 
@@ -560,7 +627,14 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 							break;
 						}
 					}
-					else free(pmd->board);
+					else {
+						free(pmd->board);
+						free(pmd);
+					}
+				}
+				else {
+					free(pmd->board);
+					free(pmd);
 				}
 			}
 
@@ -592,7 +666,14 @@ std::vector<Piece_move_data*> Evaluation::find_peice_moves(Board board, short sp
 							break;
 						}
 					}
-					else free(pmd->board);
+					else {
+						free(pmd->board);
+						free(pmd);
+					}
+				}
+				else {
+					free(pmd->board);
+					free(pmd);
 				}
 			}
 

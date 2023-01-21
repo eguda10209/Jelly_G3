@@ -50,7 +50,7 @@ public:
 
 	/*最適解を計算*/
 	/*戻り値： struct Solution	使用後、moves_data内データすべてに対して、Piece_move_data内のboardをメモリ解放 -> Piece_move_dataをメモリ解放*/
-	Solution find_optimal_solution(class Board initial_board, short spawn_x, short spawn_y, short spawn_r);
+	Solution find_optimal_solution(class Board initial_board, short spawn_x, short spawn_y, short spawn_r, int *expand_max);
 
 	/*盤面の評価値を計算*/
 	float get_evaluation_value(class Board *board);

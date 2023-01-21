@@ -13,6 +13,7 @@ private:
 	int before_score;
 	int before_frame;
 	bool is_opening;
+	int IsMoveFinished;
 public:
 	short player_num;
 	short nexts;
@@ -24,7 +25,7 @@ public:
 	bool executed_free_opt_sol;
 
 	PPT_Status get_ppt_status();
-	static void move_thread_func(Piece_move_data pmd, int player_num);
+	void move_thread_func(Piece_move_data pmd, int player_num);
 
 	Bot(int n);
 	
